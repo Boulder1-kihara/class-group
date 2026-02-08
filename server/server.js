@@ -1,5 +1,5 @@
 const express = require('express');
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -10,7 +10,29 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 // Use /tmp for database because Cloud Run filesystem is read-only
 const DB_PATH = process.env.NODE_ENV === 'production' ? '/tmp/students.db' : 'students.db';
-const db = new Database(DB_PATH);
+
+// Initialize Database (sqlite3 is async/callback based)
+const db = new sqlite3.Database(DB_PATH, (err) => {
+    if (err) {
+        console.error('Error opening database:', err.message);
+    } else {
+        console.log(`Connected to SQLite database at ${DB_PATH}`);
+        initDb();
+    }
+});
+
+function initDb() {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        admission_number TEXT NOT NULL UNIQUE,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+}
+
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 app.use(cors());
@@ -18,29 +40,18 @@ app.use(bodyParser.json());
 
 // Security Middleware
 app.use(helmet({
-    contentSecurityPolicy: false, // Disable CSP for now as we might load external scripts/fonts
+    contentSecurityPolicy: false,
 }));
 
-// Rate Limiting: Max 100 requests per 15 minutes per IP
+// Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests from this IP, please try again later.'
 });
-app.use('/api/', limiter); // Apply to API routes
+app.use('/api/', limiter);
 
 app.use(express.static(path.join(__dirname, '../client')));
-
-// Initialize Database
-db.exec(`
-  CREATE TABLE IF NOT EXISTS students (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    admission_number TEXT NOT NULL UNIQUE,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
 
 // Register Endpoint
 app.post('/api/register', (req, res) => {
@@ -50,27 +61,23 @@ app.post('/api/register', (req, res) => {
         return res.status(400).json({ error: 'All fields are required.' });
     }
 
-    // Admission Number Validation (e.g., CT100 - Capital letters)
-    const admNoRegex = /^[A-Z]{2}\d{3}$/; // Example: CT100
-    // Note: User prompt asked for "CT100 which should be in capital letes". 
-    // I will enforce uppercase storing and a basic regex, but user input might vary slightly so I'll trust the prompt's example.
-    // actually let's just uppercase it.
-
+    const admNoRegex = /^[A-Z]{2}\d{3}$/;
     const upperAdmNo = admission_number.toUpperCase();
 
-    try {
-        const insert = db.prepare('INSERT INTO students (name, phone, admission_number) VALUES (?, ?, ?)');
-        insert.run(name, phone, upperAdmNo);
-        console.log(`Registered: ${name} (${upperAdmNo})`);
-        res.json({ success: true, message: 'Registration successful!' });
-    } catch (error) {
-        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-            res.status(409).json({ error: 'Admission number already registered.' });
-        } else {
-            console.error('Error registering student:', error);
-            res.status(500).json({ error: 'Internal server error.' });
+    const sql = 'INSERT INTO students (name, phone, admission_number) VALUES (?, ?, ?)';
+
+    db.run(sql, [name, phone, upperAdmNo], function (err) {
+        if (err) {
+            if (err.message.includes('UNIQUE constraint failed')) {
+                return res.status(409).json({ error: 'Admission number already registered.' });
+            }
+            console.error('Error registering student:', err);
+            return res.status(500).json({ error: 'Internal server error.' });
         }
-    }
+
+        console.log(`Registered: ${name} (${upperAdmNo})`);
+        res.json({ success: true, message: 'Registration successful!', id: this.lastID });
+    });
 });
 
 // Get All Students Endpoint
@@ -80,14 +87,14 @@ app.get('/api/students', (req, res) => {
         return res.status(403).json({ error: 'Unauthorized: Invalid Admin Password' });
     }
 
-    try {
-        const stmt = db.prepare('SELECT * FROM students ORDER BY timestamp DESC');
-        const students = stmt.all();
-        res.json(students);
-    } catch (error) {
-        console.error('Error fetching students:', error);
-        res.status(500).json({ error: 'Internal server error.' });
-    }
+    const sql = 'SELECT * FROM students ORDER BY timestamp DESC';
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching students:', err);
+            return res.status(500).json({ error: 'Internal server error.' });
+        }
+        res.json(rows);
+    });
 });
 
 // Start Server
