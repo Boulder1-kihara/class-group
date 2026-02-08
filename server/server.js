@@ -6,7 +6,9 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const db = new Database('students.db');
+// Use /tmp for database because Cloud Run filesystem is read-only
+const DB_PATH = process.env.NODE_ENV === 'production' ? '/tmp/students.db' : 'students.db';
+const db = new Database(DB_PATH);
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -67,6 +69,7 @@ app.get('/api/students', (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running at http://0.0.0.0:${PORT}`);
+    console.log(`Database location: ${DB_PATH}`);
 });
