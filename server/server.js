@@ -3,6 +3,8 @@ const Database = require('better-sqlite3');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +15,20 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 app.use(cors());
 app.use(bodyParser.json());
+
+// Security Middleware
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for now as we might load external scripts/fonts
+}));
+
+// Rate Limiting: Max 100 requests per 15 minutes per IP
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api/', limiter); // Apply to API routes
+
 app.use(express.static(path.join(__dirname, '../client')));
 
 // Initialize Database
