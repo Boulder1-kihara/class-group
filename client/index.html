@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Formation Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Group Registration</h1>
+        <p class="subtitle">Secure Group Formation Portal</p>
+
+        <form id="registrationForm">
+            <div class="input-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" required placeholder="John Doe">
+            </div>
+
+            <div class="input-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" required placeholder="07XX XXX XXX">
+            </div>
+
+            <div class="input-group">
+                <label for="admission">Admission Number</label>
+                <input type="text" id="admission" required placeholder="CT100" style="text-transform: uppercase;">
+            </div>
+
+            <button type="submit" id="submitBtn">Submit Registration</button>
+        </form>
+
+        <div id="terminal" class="terminal hidden">
+            <div class="terminal-header">
+                <span class="status-dot"></span>
+                <span>System Status</span>
+            </div>
+            <div id="terminal-content" class="terminal-content">
+                <!-- Animation steps will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

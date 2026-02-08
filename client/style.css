@@ -1,0 +1,248 @@
+:root {
+    --bg-color: #f4f7f6;
+    --container-bg: #ffffff;
+    --primary-color: #3498db;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --error-color: #e74c3c;
+    --success-color: #2ecc71;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* Fixed height */
+    margin: 0;
+    overflow: hidden;
+    /* Prevent body scroll */
+    /* Allow scrolling if needed on small screens */
+    padding: 0;
+}
+
+.container {
+    width: 90%;
+    max-width: 400px;
+    /* Slightly smaller width */
+    padding: 2rem;
+    background: var(--container-bg);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    /* Soft shadow */
+    display: flex;
+    flex-direction: column;
+    max-height: 95vh;
+    /* Ensure it fits on screen */
+    overflow-y: auto;
+    /* Internal scroll if needed */
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.subtitle {
+    text-align: center;
+    color: #7f8c8d;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+}
+
+.input-group {
+    margin-bottom: 1.25rem;
+}
+
+label {
+    display: block;
+    color: #34495e;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+input {
+    width: 100%;
+    background: #fdfdfd;
+    border: 1px center #ccc;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.8rem;
+    font-size: 1rem;
+    color: var(--text-color);
+    outline: none;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+    /* Ensure padding doesn't affect width */
+}
+
+input:focus {
+    border-color: var(--primary-color);
+}
+
+button {
+    width: 100%;
+    padding: 1rem;
+    background: var(--primary-color);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    margin-top: 1rem;
+}
+
+button:hover {
+    background: #2980b9;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
+/* Status Log Area */
+.terminal {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 3rem;
+    /* Fixed height for single line log */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.terminal.hidden {
+    display: none;
+}
+
+.terminal-header {
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #95a5a6;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: blink 1.5s infinite ease-in-out;
+}
+
+/* Scrollable area for logs */
+.terminal-content {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 0.8rem;
+    width: 100%;
+    text-align: center;
+    /* Center the text */
+    font-size: 0.9rem;
+    color: #555;
+    border: 1px solid #eee;
+    min-height: 20px;
+}
+
+.log-entry {
+    margin-bottom: 0;
+    padding-left: 0;
+    border-left: none;
+    opacity: 0;
+    animation: fadeInFadeOut 4.8s forwards;
+    /* Make it disappear? Or just fade in since we clear innerHTML */
+    line-height: 1.4;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInFadeOut {
+    0% {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    10% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .container {
+        padding: 1.5rem;
+        width: 95%;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .terminal-content {
+        max-height: 120px;
+    }
+}
