@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // API Call (Doing it here to check validity after "visual" processing)
             // Ideally we validate first, but for the effect requested, we pretend to process.
             // Let's send data now.
-            const response = await fetch('/api/register', {
+            const response = await fetch('https://class-group-705369450883.us-east1.run.app/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
