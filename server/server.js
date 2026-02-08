@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -8,32 +8,35 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 // Use /tmp for database because Cloud Run filesystem is read-only
-const DB_PATH = process.env.NODE_ENV === 'production' ? '/tmp/students.db' : 'students.db';
+const DATA_FILE = process.env.NODE_ENV === 'production' ? '/tmp/students.json' : 'students.json';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
-// Initialize Database (sqlite3 is async/callback based)
-const db = new sqlite3.Database(DB_PATH, (err) => {
-    if (err) {
-        console.error('Error opening database:', err.message);
-    } else {
-        console.log(`Connected to SQLite database at ${DB_PATH}`);
-        initDb();
+// Helper to read data
+function readData() {
+    try {
+        if (!fs.existsSync(DATA_FILE)) {
+            // Initialize with an empty array if file doesn't exist
+            fs.writeFileSync(DATA_FILE, JSON.stringify([]), 'utf8');
+            return [];
+        }
+        const data = fs.readFileSync(DATA_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        console.error('Error reading data:', err);
+        return [];
     }
-});
-
-function initDb() {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        admission_number TEXT NOT NULL UNIQUE,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
 }
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+// Helper to write data
+function writeData(data) {
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    } catch (err) {
+        console.error('Error writing data:', err);
+    }
+}
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -64,20 +67,30 @@ app.post('/api/register', (req, res) => {
     const admNoRegex = /^[A-Z]{2}\d{3}$/;
     const upperAdmNo = admission_number.toUpperCase();
 
-    const sql = 'INSERT INTO students (name, phone, admission_number) VALUES (?, ?, ?)';
+    if (!admNoRegex.test(upperAdmNo)) {
+        return res.status(400).json({ error: 'Admission number must be in the format AA123.' });
+    }
 
-    db.run(sql, [name, phone, upperAdmNo], function (err) {
-        if (err) {
-            if (err.message.includes('UNIQUE constraint failed')) {
-                return res.status(409).json({ error: 'Admission number already registered.' });
-            }
-            console.error('Error registering student:', err);
-            return res.status(500).json({ error: 'Internal server error.' });
-        }
+    const students = readData();
 
-        console.log(`Registered: ${name} (${upperAdmNo})`);
-        res.json({ success: true, message: 'Registration successful!', id: this.lastID });
-    });
+    // Duplicate Check
+    if (students.some(s => s.admission_number === upperAdmNo)) {
+        return res.status(409).json({ error: 'Admission number already registered.' });
+    }
+
+    const newStudent = {
+        id: students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1, // Simple ID generation
+        name,
+        phone,
+        admission_number: upperAdmNo,
+        timestamp: new Date().toISOString()
+    };
+
+    students.push(newStudent);
+    writeData(students);
+
+    console.log(`Registered: ${name} (${upperAdmNo})`);
+    res.json({ success: true, message: 'Registration successful!', id: newStudent.id });
 });
 
 // Get All Students Endpoint
@@ -87,18 +100,14 @@ app.get('/api/students', (req, res) => {
         return res.status(403).json({ error: 'Unauthorized: Invalid Admin Password' });
     }
 
-    const sql = 'SELECT * FROM students ORDER BY timestamp DESC';
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            console.error('Error fetching students:', err);
-            return res.status(500).json({ error: 'Internal server error.' });
-        }
-        res.json(rows);
-    });
+    const students = readData();
+    // Sort by timestamp desc
+    students.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    res.json(students);
 });
 
 // Start Server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${PORT}`);
-    console.log(`Database location: ${DB_PATH}`);
+    console.log(`Data file location: ${DATA_FILE}`);
 });
