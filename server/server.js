@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 3000;
 // Use /tmp for database because Cloud Run filesystem is read-only
 const DB_PATH = process.env.NODE_ENV === 'production' ? '/tmp/students.db' : 'students.db';
 const db = new Database(DB_PATH);
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -58,6 +59,11 @@ app.post('/api/register', (req, res) => {
 
 // Get All Students Endpoint
 app.get('/api/students', (req, res) => {
+    const adminKey = req.headers['admin-key'];
+    if (adminKey !== ADMIN_PASSWORD) {
+        return res.status(403).json({ error: 'Unauthorized: Invalid Admin Password' });
+    }
+
     try {
         const stmt = db.prepare('SELECT * FROM students ORDER BY timestamp DESC');
         const students = stmt.all();
