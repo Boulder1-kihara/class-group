@@ -46,11 +46,12 @@ app.post('/api/register', async (req, res) => {
         return res.status(400).json({ error: 'All fields are required.' });
     }
 
-    const admNoRegex = /^[A-Z]{2}\d{3}$/;
+    // Admission Number Validation: Allow alphanumeric and slashes (e.g., CT100/G/22911/24)
+    const admNoRegex = /^[A-Z0-9\/]+$/;
     const upperAdmNo = admission_number.toUpperCase();
 
     if (!admNoRegex.test(upperAdmNo)) {
-        return res.status(400).json({ error: 'Admission number must be in the format AA123.' });
+        return res.status(400).json({ error: 'Admission number contains invalid characters. Use letters, numbers, and slashes only.' });
     }
 
     try {
